@@ -54,7 +54,7 @@
     "hardhat": "^2.4.3",
     "hardhat-contract-sizer": "^2.0.3",
     "hardhat-gas-reporter": "^1.0.4",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "moment": "^2.15.2",
     "prettier": "^2.2.1",
     "ts-generator": "^0.1.1",
