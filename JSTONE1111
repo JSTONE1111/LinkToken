@@ -1,0 +1,103 @@
+name: Sync
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+      
+      - name: Fetch all from remote
+        run: |
+          echo "Fetching latest changes from remote..."
+          git fetch origin --tags --force
+          git fetch origin
+      
+      - name: Sync tags and branches
+        run: |
+          echo "Starting tag sync process..."
+          
+          # Create all your tags here
+          # Example tags (replace with your actual tag creation logic):
+          git tag -f v2.31.2-ccip-beta.0
+          git tag -f v2.31.2-ccip-beta.1
+          # ... add all your other tags ...
+          
+          echo "Tags created successfully"
+      
+      - name: Push with force-with-lease (safer force push)
+        run: |
+          echo "Pushing tags to remote with force-with-lease..."
+          
+          # Option 1: Push all tags with force-with-lease
+          # This is safer as it checks if remote hasn't changed since last fetch
+          git push --force-with-lease --tags origin
+          
+          # Option 2: If you need to push the branch as well
+          # git push --force-with-lease origin develop
+          
+          echo "Push completed successfully"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Handle push failures
+        if: failure()
+        run: |
+          echo "âš ï¸ Push failed! This usually means:"
+          echo "1. Someone else pushed to the remote while this job was running"
+          echo "2. The remote branch has changes we don't have locally"
+          echo ""
+          echo "The workflow will retry automatically if configured,"
+          echo "or you can manually re-run the workflow."
+          echo ""
+          echo "To investigate, check the logs above for specific errors."
+          exit 1
+
+  # Optional: Add a retry mechanism
+  sync-with-retry:
+    needs: sync
+    if: failure()
+    runs-on: ubuntu-latest
+    strategy:
+      max-attempts: 3
+      
+    steps:
+      - name: Wait before retry
+        run: sleep 10
+        
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+      
+      - name: Fetch and push (retry)
+        run: |
+          echo "Retrying sync operation..."
+          git fetch origin --tags --force
+          git fetch origin
+          
+          # Recreate tags if needed
+          # ... your tag creation logic ...
+          
+          git push --force-with-lease --tags origin
